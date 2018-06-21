@@ -40,7 +40,7 @@ node default {
   }
   service { 'nginx':
     ensure => running,
-    enable = true,
+    enable => true,
   }
   exec { 'curl-site':
     command => 'curl localhost'
