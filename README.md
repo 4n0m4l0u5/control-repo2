@@ -1,3 +1,5 @@
+[![Build Status](https://travis-ci.org/4n0m4l0u5/control-repo2.svg?branch=production)](https://travis-ci.org/4n0m4l0u5/control-repo2)
+
 # A Puppet Control Repository
 
 * [What You Get From This control\-repo](#what-you-get-from-this-control-repo)
