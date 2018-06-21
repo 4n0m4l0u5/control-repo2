@@ -34,7 +34,7 @@ node default {
     ensure => installed,
   }
   file { '/var/www/index.html':
-    ensure => file,
+    ensure  => file,
     require => Package['nginx'],
     content => 'Automation for the People',
   }
