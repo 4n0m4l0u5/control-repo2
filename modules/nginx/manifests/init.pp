@@ -1,6 +1,9 @@
 class nginx {
-  package { ‘nginx’,'curl':
+  package { ‘nginx’:
     ensure => present,
+  }
+  package { 'curl':
+    ensure =. present,
   }
   file { ‘/var/www/index.html’:
     ensure => file,
