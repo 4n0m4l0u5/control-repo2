@@ -33,12 +33,12 @@ node default {
   package { 'curl':
     ensure => installed,
   }
-  file { ‘/var/www/index.html’:
+  file { '/var/www/index.html':
     ensure => file,
-    require => Package[‘nginx’],
+    require => Package['nginx'],
     content => 'Automation for the People',
   }
-  service { ‘nginx’:
+  service { 'nginx':
     ensure => running,
     enable = true,
   }
