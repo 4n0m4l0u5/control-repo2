@@ -1,0 +1,133 @@
+---
+Description: >-
+  Build an AWS VPC with one subnet, one ubuntu puppet master and one ubuntu puppet agent, puppet then configures the agent as a simple nginx server
+AWSTemplateFormatVersion: 2010-09-09
+Parameters:
+  masterUserData:
+      Type: String
+  agentUserData:
+      Type: String
+Resources:
+  VPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: 10.0.0.0/24
+      EnableDnsSupport: 'true'
+      EnableDnsHostnames: 'true'
+      InstanceTenancy: default
+
+  S3Role:
+    Type: "AWS::IAM::Role"
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          -
+            Effect: "Allow"
+            Principal:
+              Service:
+                - "ec2.amazonaws.com"
+            Action:
+              - "sts:AssumeRole"
+      Path: "/"
+      Policies:
+        -
+          PolicyName: "cjc-mini-proj-s3root"
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              -
+                Effect: "Allow"
+                Action: "s3:*"
+                Resource: "*"
+  S3InstanceProfile:
+    Type: "AWS::IAM::InstanceProfile"
+    Properties:
+      Path: "/"
+      Roles:
+        -
+          Ref: "S3Role"
+  InternetGateway:
+    Type: AWS::EC2::InternetGateway
+  VPCGatewayAttachment:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+        VpcId: !Ref VPC
+        InternetGatewayId: !Ref InternetGateway
+  Subnet:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: 10.0.0.0/28
+      MapPublicIpOnLaunch: 'true'
+  RouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+  InternetRoute:
+    Type: AWS::EC2::Route
+    DependsOn: InternetGateway
+    Properties:
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref InternetGateway
+      RouteTableId: !Ref RouteTable
+  SubnetRouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref RouteTable
+      SubnetId: !Ref Subnet
+  SecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupName: "Puppet-SG"
+      GroupDescription: "SSH and HTTP traffic in from internet, all traffic inside VPC and all traffic out."
+      VpcId: !Ref VPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: '22'
+          ToPort: '22'
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: '80'
+          ToPort: '80'
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: -1
+          CidrIp: 10.0.0.0/24
+      SecurityGroupEgress:
+        - IpProtocol: -1
+          CidrIp: 0.0.0.0/0
+  PuppetMasterInstance:
+    Type: AWS::EC2::Instance
+    DependsOn:
+    - SecurityGroup
+    - SubnetRouteTableAssociation
+    Properties:
+      IamInstanceProfile: !Ref S3InstanceProfile
+      ImageId: ami-a4dc46db
+      InstanceInitiatedShutdownBehavior: stop
+      InstanceType: c4.xlarge
+      KeyName: puppet-key
+      Monitoring: 'true'
+      PrivateIpAddress: 10.0.0.10
+      SecurityGroupIds:
+      - Ref: SecurityGroup
+      SubnetId:
+        Ref: Subnet
+      UserData: !Ref masterUserData
+  PuppetAgentInstance:
+    Type: AWS::EC2::Instance
+    DependsOn:
+    - PuppetMasterInstance
+    Properties:
+      IamInstanceProfile: !Ref S3InstanceProfile
+      ImageId: ami-a4dc46db
+      InstanceInitiatedShutdownBehavior: stop
+      InstanceType: t2.medium
+      KeyName: puppet-key
+      Monitoring: 'true'
+      PrivateIpAddress: 10.0.0.11
+      SecurityGroupIds:
+      - Ref: SecurityGroup
+      SubnetId:
+        Ref: Subnet
+      UserData: !Ref agentUserData
